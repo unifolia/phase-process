@@ -1,0 +1,508 @@
+:root {
+  --quest-parchment: #e7dfca;
+  --aged-vellum: #cbc3a9;
+  --abyss-ink: #15231e;
+  --sage-smoke: #43564d;
+  --druid-moss: #3c6956;
+  --treasure-brass: #b98736;
+  --blood-sigil: #b34331;
+  --wizard-lapis: #263b66;
+  --cantrip-cream: #f7f2e3;
+  --rune-radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--quest-parchment);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--abyss-ink);
+  font-family:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.campaign-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 34px 0 48px;
+}
+
+.tavern-banner {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 460px);
+  gap: 22px;
+  align-items: end;
+  min-height: 168px;
+  animation: rise-in 700ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(4.4rem, 13vw, 10.8rem);
+  font-weight: 400;
+  line-height: 0.78;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.spellbar {
+  border: 1px solid rgba(21, 35, 30, 0.26);
+  background: linear-gradient(
+    135deg,
+    rgba(247, 242, 227, 0.78),
+    rgba(203, 195, 169, 0.45)
+  );
+
+  backdrop-filter: blur(16px);
+}
+
+.spellbar {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+  border-radius: var(--rune-radius);
+}
+
+.hero-action,
+.squire-action,
+.summon-button,
+.banish-button {
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(21, 35, 30, 0.38);
+  padding: 0 18px;
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.hero-action {
+  min-width: 92px;
+  color: var(--cantrip-cream);
+  background: var(--abyss-ink);
+}
+
+.squire-action,
+.summon-button,
+.banish-button {
+  color: var(--abyss-ink);
+  background: rgba(247, 242, 227, 0.58);
+}
+
+.hero-action:hover {
+  background: var(--sage-smoke);
+}
+
+.squire-action:hover,
+.summon-button:hover,
+.banish-button:hover {
+  background: var(--aged-vellum);
+}
+
+.haste-control {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  color: var(--sage-smoke);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--blood-sigil);
+}
+
+.summoning-circle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  margin: 22px 0 18px auto;
+  padding: 10px 12px 10px 10px;
+  border: 1px solid rgba(21, 35, 30, 0.24);
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    rgba(247, 242, 227, 0.74),
+    rgba(203, 195, 169, 0.38)
+  );
+  backdrop-filter: blur(14px);
+  animation: rise-in 700ms 90ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+.heartbeat-rune {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  justify-self: center;
+  margin-left: 2px;
+  border: 1px solid rgba(21, 35, 30, 0.32);
+  border-radius: 50%;
+  background: var(--aged-vellum);
+}
+
+.heartbeat-rune.is-lit {
+  background: var(--druid-moss);
+}
+
+.party-roster {
+  display: grid;
+  gap: 14px;
+}
+
+.adventurer-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 88px minmax(190px, 260px) minmax(260px, 1fr) auto;
+  gap: 14px;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid rgba(21, 35, 30, 0.24);
+  border-radius: var(--rune-radius);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(247, 242, 227, 0.86),
+      rgba(247, 242, 227, 0.58)
+    ),
+    linear-gradient(120deg, rgba(38, 59, 102, 0.08), transparent 42%);
+  animation: track-in 560ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+.adventurer-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 7px;
+  background: var(--sigil-aura, var(--druid-moss));
+}
+
+.adventurer-card.is-silenced {
+  opacity: 0.58;
+}
+
+.initiative-count {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding-left: 8px;
+}
+
+.initiative-count strong {
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.initiative-count span {
+  color: var(--sage-smoke);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.voice-grimoire,
+.incantation-block {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.adventurer-card label {
+  color: var(--sage-smoke);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+select,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(21, 35, 30, 0.3);
+  border-radius: var(--rune-radius);
+  color: var(--abyss-ink);
+  background: rgba(247, 242, 227, 0.76);
+  outline: none;
+}
+
+select:focus,
+textarea:focus {
+  border-color: var(--blood-sigil);
+}
+
+select {
+  min-height: 44px;
+  padding: 0 12px;
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+textarea {
+  min-height: 58px;
+  max-height: 118px;
+  resize: vertical;
+  padding: 10px 12px;
+  font-family: "Courier New", monospace;
+  font-size: 0.96rem;
+  line-height: 1.35;
+  cursor: text;
+}
+
+.adventurer-tools {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 9px;
+  align-content: center;
+  justify-content: end;
+}
+
+.silence-button {
+  min-width: 52px;
+}
+
+.banish-button {
+  min-width: 44px;
+  padding: 0 13px;
+}
+
+.rune-chain {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 31px;
+  align-items: center;
+}
+
+.rune-stone {
+  min-width: 43px;
+  height: 31px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 9px;
+  border: 1px solid rgba(21, 35, 30, 0.26);
+  border-radius: 999px;
+  color: var(--abyss-ink);
+  background: rgba(247, 242, 227, 0.52);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition:
+    transform 130ms ease,
+    background 130ms ease,
+    color 130ms ease;
+}
+
+.rune-stone.is-glowing {
+  color: var(--cantrip-cream);
+  background: var(--sigil-aura, var(--druid-moss));
+  transform: translateY(-2px);
+}
+
+.rune-stone.is-resting {
+  opacity: 0.58;
+}
+
+.curse-warning {
+  grid-column: 3 / -1;
+  margin: -2px 0 0;
+  color: var(--blood-sigil);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.adventurer-card[data-initiative="1"] {
+  --sigil-aura: var(--druid-moss);
+}
+
+.adventurer-card[data-initiative="2"] {
+  --sigil-aura: var(--wizard-lapis);
+}
+
+.adventurer-card[data-initiative="3"] {
+  --sigil-aura: var(--treasure-brass);
+}
+
+.adventurer-card[data-initiative="4"] {
+  --sigil-aura: var(--blood-sigil);
+}
+
+.adventurer-card[data-initiative="5"] {
+  --sigil-aura: #2f675f;
+}
+
+.adventurer-card[data-initiative="6"],
+.adventurer-card[data-initiative="12"],
+.adventurer-card[data-initiative="18"] {
+  --sigil-aura: #6b5167;
+}
+
+.adventurer-card[data-initiative="7"],
+.adventurer-card[data-initiative="13"] {
+  --sigil-aura: #8a5b34;
+}
+
+.adventurer-card[data-initiative="8"],
+.adventurer-card[data-initiative="14"] {
+  --sigil-aura: #3f6d76;
+}
+
+.adventurer-card[data-initiative="9"],
+.adventurer-card[data-initiative="15"] {
+  --sigil-aura: #7b6e38;
+}
+
+.adventurer-card[data-initiative="10"],
+.adventurer-card[data-initiative="16"] {
+  --sigil-aura: #5f6040;
+}
+
+.adventurer-card[data-initiative="11"],
+.adventurer-card[data-initiative="17"] {
+  --sigil-aura: #874d42;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes track-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 880px) {
+  .tavern-banner {
+    grid-template-columns: 1fr;
+    align-items: start;
+
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+  }
+
+  .spellbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .haste-control {
+    grid-column: 1 / -1;
+  }
+
+  .adventurer-card {
+    grid-template-columns: 72px minmax(0, 1fr) minmax(150px, auto);
+  }
+
+  .adventurer-tools {
+    grid-template-columns: minmax(88px, 1fr) 44px;
+    min-width: 150px;
+  }
+
+  .adventurer-tools button {
+    padding-inline: 12px;
+  }
+
+  .incantation-block {
+    grid-column: 1 / -1;
+  }
+
+  .rune-chain,
+  .curse-warning {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .campaign-sheet {
+    width: min(100% - 20px, 1180px);
+    padding-top: 20px;
+  }
+
+  h1 {
+    font-size: clamp(3.55rem, 20vw, 5.6rem);
+  }
+
+  .summon-button {
+    width: 100%;
+  }
+
+  .summoning-circle {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .adventurer-card {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .initiative-count {
+    grid-template-columns: auto 1fr;
+    align-items: end;
+    padding-left: 8px;
+  }
+
+  .adventurer-tools {
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+  }
+
+  .adventurer-tools button {
+    width: 100%;
+  }
+}

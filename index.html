@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase Process</title>
+    <link rel="icon" type="image/x-icon" href="./favicon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./phase.js" defer></script>
+  </head>
+  <body>
+    <main class="campaign-sheet">
+      <header class="tavern-banner">
+        <div>
+          <h1>Phase Process</h1>
+        </div>
+        <div class="spellbar" aria-label="Transport controls">
+          <button id="open-portal" class="hero-action" type="button">
+            Play
+          </button>
+          <button id="seal-portal" class="squire-action" type="button">
+            Stop
+          </button>
+          <div class="haste-control">
+            <label for="haste-dial">Tempo</label>
+            <input
+              id="haste-dial"
+              type="range"
+              min="48"
+              max="176"
+              value="86"
+              step="1"
+            />
+            <output id="haste-oracle" for="haste-dial">86 BPM</output>
+          </div>
+        </div>
+      </header>
+
+      <section class="summoning-circle" aria-label="Track controls">
+        <span
+          id="heartbeat-rune"
+          class="heartbeat-rune"
+          aria-hidden="true"
+        ></span>
+        <button id="summon-voice" class="summon-button" type="button">
+          Add track
+        </button>
+      </section>
+
+      <section
+        id="party-roster"
+        class="party-roster"
+        aria-live="polite"
+      ></section>
+    </main>
+  </body>
+</html>

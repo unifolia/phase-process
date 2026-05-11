@@ -1,0 +1,558 @@
+const MAX_TRACKS = 18,
+  DEFAULT_BPM = 90,
+  SCHEDULE_AHEAD_SECONDS = 0.14,
+  LOOKAHEAD_MS = 25,
+  soundBank = [
+    { id: "bells", label: "Bells" },
+    { id: "frogs", label: "Frogs" },
+    { id: "pipes", label: "Pipes" },
+    { id: "clarinets", label: "Clarinets" },
+  ],
+  noteOffsets = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 },
+  starterTracks = [
+    { sound: "clarinets", sequence: "[C3, B3, G3, A3, A4]" },
+    { sound: "bells", sequence: "[E5, B4, G4, B4, E5, G5]" },
+  ],
+  state = {
+    audioContext: null,
+    master: null,
+    timer: null,
+    playing: !1,
+    bpm: 90,
+    nextStepTime: 0,
+    tick: 0,
+    visualRunId: 0,
+    tracks: [],
+  },
+  els = {
+    tracks: document.querySelector("#party-roster"),
+    addTrack: document.querySelector("#summon-voice"),
+    playToggle: document.querySelector("#open-portal"),
+    stopButton: document.querySelector("#seal-portal"),
+    tempo: document.querySelector("#haste-dial"),
+    tempoReadout: document.querySelector("#haste-oracle"),
+    pulseLight: document.querySelector("#heartbeat-rune"),
+  },
+  eighthSeconds = () => 30 / state.bpm,
+  normalizeSoundId = (e) =>
+    soundBank.some(({ id: t }) => t === e) ? e : soundBank[0].id,
+  makeTrack = (e = {}) => ({
+    id:
+      window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : String(Date.now() + Math.random()),
+    sound: normalizeSoundId(e.sound),
+    sequence: e.sequence || "[C3, E3, G3, A3]",
+    notes: [],
+    error: "",
+    muted: !1,
+    activeStep: -1,
+  }),
+  accidentalOffset = (e) =>
+    e
+      ? "x" === e.toLowerCase()
+        ? 2
+        : e.startsWith("#")
+          ? e.length
+          : -e.length
+      : 0,
+  normalizeAccidental = (e) =>
+    e
+      ? "x" === e.toLowerCase()
+        ? "x"
+        : e.startsWith("#")
+          ? e
+          : "b".repeat(e.length)
+      : "",
+  parseSequence = (e) => {
+    const t = e.trim(),
+      a = t.startsWith("[") && t.endsWith("]") ? t.slice(1, -1) : t;
+    if (!a.trim()) return { notes: [], error: "" };
+    const n = a
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean),
+      s = [];
+    return (
+      n.forEach((e) => {
+        const t = e.toUpperCase();
+        if ("R" === t || "REST" === t || "-" === e || "_" === e)
+          return void s.push({ label: "R", rest: !0 });
+        const a = e.match(/^([A-Ga-g])(#{1,2}|[bB]{1,2}|[xX])?(-?\d{1,2})$/);
+        if (!a) return void s.push({ label: "R", rest: !0 });
+        const n = a[1].toUpperCase(),
+          r = a[2] || "",
+          c = Number(a[3]);
+        if (!(n in noteOffsets) || c < 0 || c > 8)
+          return void s.push({ label: "R", rest: !0 });
+        const o =
+            440 *
+            2 **
+              ((12 * (c + 1) + noteOffsets[n] + accidentalOffset(r) - 69) / 12),
+          i = `${n}${normalizeAccidental(r)}${c}`;
+        s.push({ label: i, frequency: o, rest: !1 });
+      }),
+      { notes: s, error: "" }
+    );
+  },
+  syncParsedTracks = () => {
+    state.tracks.forEach((e) => {
+      const t = parseSequence(e.sequence);
+      ((e.notes = t.notes),
+        (e.error = t.error),
+        e.notes.length &&
+          e.activeStep >= e.notes.length &&
+          (e.activeStep = -1));
+    });
+  },
+  initAudio = () => {
+    if (state.audioContext) return;
+    const e = new (window.AudioContext || window.webkitAudioContext)(),
+      t = e.createGain(),
+      a = e.createDynamicsCompressor();
+    ((t.gain.value = 0.72),
+      (a.threshold.value = -24),
+      (a.knee.value = 18),
+      (a.ratio.value = 3),
+      (a.attack.value = 0.012),
+      (a.release.value = 0.2),
+      t.connect(a),
+      a.connect(e.destination),
+      (state.audioContext = e),
+      (state.master = t));
+  },
+  shapeGain = (e, t, a) => {
+    (e.cancelScheduledValues(t),
+      a.forEach(([a, n, s]) => {
+        "exp" === s
+          ? e.exponentialRampToValueAtTime(Math.max(n, 1e-4), t + a)
+          : 0 === a
+            ? e.setValueAtTime(n, t)
+            : e.linearRampToValueAtTime(n, t + a);
+      }));
+  },
+  makeFilter = (e, t, a, n = 0.5) => {
+    const s = e.createBiquadFilter();
+    return ((s.type = t), (s.frequency.value = a), (s.Q.value = n), s);
+  },
+  playBells = (e, t, a) => {
+    const n = state.audioContext,
+      s = n.createGain(),
+      r = n.createOscillator(),
+      c = n.createOscillator(),
+      o = makeFilter(n, "lowpass", 2600, 0.4);
+    ((r.type = "sine"),
+      (c.type = "triangle"),
+      r.frequency.setValueAtTime(e.frequency, t),
+      c.frequency.setValueAtTime(2.01 * e.frequency, t),
+      shapeGain(s.gain, t, [
+        [0, 1e-4],
+        [0.012, 0.32],
+        [0.62 * a, 0.11, "exp"],
+        [a + 0.22, 1e-4, "exp"],
+      ]),
+      r.connect(o),
+      c.connect(o),
+      o.connect(s),
+      s.connect(state.master),
+      r.start(t),
+      c.start(t),
+      r.stop(t + a + 0.26),
+      c.stop(t + a + 0.26));
+  },
+  playFrogs = (e, t, a) => {
+    const n = state.audioContext,
+      s = n.createGain(),
+      r = n.createOscillator(),
+      c = n.createOscillator(),
+      o = makeFilter(n, "bandpass", Math.min(3 * e.frequency, 2800), 0.85);
+    ((r.type = "sine"),
+      (c.type = "sine"),
+      r.frequency.setValueAtTime(e.frequency, t),
+      c.frequency.setValueAtTime(1.5 * e.frequency, t),
+      shapeGain(s.gain, t, [
+        [0, 1e-4],
+        [0.018, 0.24],
+        [0.48 * a, 0.13, "exp"],
+        [a + 0.16, 1e-4, "exp"],
+      ]),
+      r.connect(o),
+      c.connect(o),
+      o.connect(s),
+      s.connect(state.master),
+      r.start(t),
+      c.start(t),
+      r.stop(t + a + 0.2),
+      c.stop(t + a + 0.2));
+  },
+  playPipes = (e, t, a) => {
+    const n = state.audioContext,
+      s = n.createGain(),
+      r = n.createOscillator(),
+      c = n.createOscillator(),
+      o = makeFilter(n, "lowpass", 1150, 0.7);
+    ((r.type = "triangle"),
+      (c.type = "sine"),
+      r.frequency.setValueAtTime(e.frequency, t),
+      c.frequency.setValueAtTime(0.997 * e.frequency, t),
+      r.detune.setValueAtTime(-6, t),
+      c.detune.setValueAtTime(5, t),
+      shapeGain(s.gain, t, [
+        [0, 1e-4],
+        [0.055, 0.19],
+        [Math.max(0.74 * a, 0.08), 0.15],
+        [a + 0.3, 1e-4, "exp"],
+      ]),
+      r.connect(o),
+      c.connect(o),
+      o.connect(s),
+      s.connect(state.master),
+      r.start(t),
+      c.start(t),
+      r.stop(t + a + 0.34),
+      c.stop(t + a + 0.34));
+  },
+  playClarinets = (e, t, a) => {
+    const n = state.audioContext,
+      s = n.createGain(),
+      r = n.createOscillator(),
+      c = n.createOscillator(),
+      o = makeFilter(n, "lowpass", 780, 0.45);
+    ((r.type = "sine"),
+      (c.type = "triangle"),
+      r.frequency.setValueAtTime(0.5 * e.frequency, t),
+      c.frequency.setValueAtTime(e.frequency, t),
+      c.detune.setValueAtTime(8, t),
+      o.frequency.setValueAtTime(520, t),
+      o.frequency.linearRampToValueAtTime(920, t + 0.65 * a),
+      shapeGain(s.gain, t, [
+        [0, 1e-4],
+        [0.04, 0.2],
+        [0.8 * a, 0.17],
+        [a + 0.42, 1e-4, "exp"],
+      ]),
+      r.connect(o),
+      c.connect(o),
+      o.connect(s),
+      s.connect(state.master),
+      r.start(t),
+      c.start(t),
+      r.stop(t + a + 0.46),
+      c.stop(t + a + 0.46));
+  },
+  players = {
+    bells: playBells,
+    frogs: playFrogs,
+    pipes: playPipes,
+    clarinets: playClarinets,
+  },
+  playNote = (e, t, a) => {
+    e.muted ||
+      t.rest ||
+      !players[e.sound] ||
+      players[e.sound](t, a, 0.86 * eighthSeconds());
+  },
+  scheduleStep = (e, t) => {
+    const a = state.visualRunId,
+      n = new Map();
+    state.tracks.forEach((a) => {
+      if (!a.notes.length) return;
+      const s = e % a.notes.length;
+      (n.set(a.id, s), playNote(a, a.notes[s], t));
+    });
+    const s = Math.max(0, 1e3 * (t - state.audioContext.currentTime));
+    window.setTimeout(() => {
+      state.visualRunId === a &&
+        state.playing &&
+        (state.tracks.forEach((e) => {
+          n.has(e.id) && (e.activeStep = n.get(e.id));
+        }),
+        paintActiveSteps(),
+        flashPulse(e));
+    }, s);
+  },
+  scheduler = () => {
+    for (; state.nextStepTime < state.audioContext.currentTime + 0.14; )
+      (scheduleStep(state.tick, state.nextStepTime),
+        (state.nextStepTime += eighthSeconds()),
+        (state.tick += 1));
+  },
+  startPlayback = async () => {
+    (syncParsedTracks(),
+      state.tracks.some((e) => e.notes.length) &&
+        (initAudio(),
+        "suspended" === state.audioContext.state &&
+          (await state.audioContext.resume()),
+        state.playing ||
+          ((state.playing = !0),
+          (state.visualRunId += 1),
+          (state.tick = 0),
+          (state.nextStepTime = state.audioContext.currentTime + 0.08),
+          (els.playToggle.textContent = "Pause"),
+          renderTracks(),
+          (state.timer = window.setInterval(scheduler, 25)),
+          scheduler())));
+  },
+  pausePlayback = () => {
+    state.playing &&
+      ((state.playing = !1),
+      (state.visualRunId += 1),
+      window.clearInterval(state.timer),
+      (state.timer = null),
+      (els.playToggle.textContent = "Play"),
+      els.pulseLight.classList.remove("is-lit"));
+  },
+  stopPlayback = () => {
+    (pausePlayback(),
+      (state.tick = 0),
+      state.tracks.forEach((e) => {
+        e.activeStep = -1;
+      }),
+      renderTracks());
+  },
+  flashPulse = (e) => {
+    e % 2 == 0 &&
+      (els.pulseLight.classList.add("is-lit"),
+      window.setTimeout(() => els.pulseLight.classList.remove("is-lit"), 82));
+  },
+  persist = () => {
+    const e = {
+      bpm: state.bpm,
+      tracks: state.tracks.map(({ sound: e, sequence: t, muted: a }) => ({
+        sound: e,
+        sequence: t,
+        muted: a,
+      })),
+    };
+    localStorage.setItem("tide-index-state", JSON.stringify(e));
+  },
+  restore = () => {
+    try {
+      const e = localStorage.getItem("tide-index-state");
+      if (!e) return !1;
+      const t = JSON.parse(e);
+      return (
+        !!Array.isArray(t.tracks) &&
+        ((state.bpm = Number(t.bpm) || 90),
+        (state.tracks = t.tracks.slice(0, 18).map((e) => makeTrack(e))),
+        state.tracks.length > 0)
+      );
+    } catch {
+      return !1;
+    }
+  },
+  addTrack = (e) => {
+    if (state.tracks.length >= 18) return;
+    const t = makeTrack(e),
+      a = parseSequence(t.sequence);
+    ((t.notes = a.notes),
+      (t.error = a.error),
+      state.tracks.push(t),
+      els.tracks.append(renderTrack(t, state.tracks.length - 1)),
+      updateAddTrackButton(),
+      persist());
+  },
+  removeTrack = (e) => {
+    const t = state.tracks.findIndex((t) => t.id === e);
+    if (-1 === t) return;
+    state.tracks.splice(t, 1);
+    const a = [...els.tracks.querySelectorAll(".adventurer-card")].find(
+      (t) => t.dataset.adventurerId === e,
+    );
+    (a && a.remove(), updateTrackOrder(), updateAddTrackButton(), persist());
+  },
+  noteCountLabel = (e) => `${e} ${1 === e ? "note" : "notes"}`,
+  createStepElement = (e, t, a) => {
+    const n = document.createElement("span");
+    return (
+      (n.className = [
+        "rune-stone",
+        t === a ? "is-glowing" : "",
+        e.rest ? "is-resting" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")),
+      (n.textContent = e.label),
+      n
+    );
+  },
+  updateTrackIndicators = (e, t) => {
+    const a = e.querySelector(".initiative-count span");
+    a && (a.textContent = noteCountLabel(t.notes.length || 0));
+    const n = e.querySelector(".rune-chain");
+    n &&
+      n.replaceChildren(
+        ...t.notes.map((e, a) => createStepElement(e, a, t.activeStep)),
+      );
+    let s = e.querySelector(".curse-warning");
+    (t.error &&
+      !s &&
+      ((s = document.createElement("p")),
+      (s.className = "curse-warning"),
+      e.append(s)),
+      s && (t.error ? (s.textContent = t.error) : s.remove()));
+  },
+  renderTrack = (e, t) => {
+    const a = document.createElement("article");
+    ((a.className = "adventurer-card" + (e.muted ? " is-silenced" : "")),
+      (a.dataset.adventurerId = e.id),
+      (a.dataset.initiative = String(t + 1)),
+      (a.style.animationDelay = 55 * t + "ms"));
+    const n = document.createElement("div");
+    ((n.className = "initiative-count"),
+      (n.innerHTML = `<strong>${t + 1}</strong><span>${noteCountLabel(e.notes.length || 0)}</span>`));
+    const s = document.createElement("div");
+    s.className = "voice-grimoire";
+    const r = document.createElement("label"),
+      c = `voice-${e.id}`;
+    (r.setAttribute("for", c), (r.textContent = "Sound"));
+    const o = document.createElement("select");
+    ((o.id = c),
+      (o.dataset.action = "voice"),
+      soundBank.forEach((t) => {
+        const a = document.createElement("option");
+        ((a.value = t.id),
+          (a.textContent = t.label),
+          (a.selected = t.id === e.sound),
+          o.append(a));
+      }),
+      s.append(r, o));
+    const i = document.createElement("div");
+    i.className = "incantation-block";
+    const l = document.createElement("label"),
+      d = `incantation-${e.id}`;
+    (l.setAttribute("for", d), (l.textContent = "Sequence"));
+    const u = document.createElement("textarea");
+    ((u.id = d),
+      (u.dataset.action = "incantation"),
+      (u.spellcheck = !1),
+      (u.value = e.sequence),
+      (u.placeholder = "[C3, D3, E3, G3]"),
+      i.append(l, u));
+    const p = document.createElement("div");
+    p.className = "adventurer-tools";
+    const m = document.createElement("button");
+    ((m.className = "squire-action silence-button"),
+      (m.type = "button"),
+      (m.dataset.action = "silence"),
+      (m.textContent = e.muted ? "Unmute" : "Mute"));
+    const k = document.createElement("button");
+    ((k.className = "banish-button"),
+      (k.type = "button"),
+      (k.dataset.action = "banish"),
+      (k.textContent = "X"),
+      (k.ariaLabel = `Remove track ${t + 1}`),
+      p.append(m, k));
+    const y = document.createElement("div");
+    if (
+      ((y.className = "rune-chain"),
+      e.notes.forEach((t, a) => {
+        y.append(createStepElement(t, a, e.activeStep));
+      }),
+      a.append(n, s, i, p, y),
+      e.error)
+    ) {
+      const t = document.createElement("p");
+      ((t.className = "curse-warning"), (t.textContent = e.error), a.append(t));
+    }
+    return a;
+  },
+  updateTrackOrder = () => {
+    els.tracks.querySelectorAll(".adventurer-card").forEach((e, t) => {
+      const a = t + 1;
+      e.dataset.initiative = String(a);
+      const n = e.querySelector(".initiative-count strong");
+      n && (n.textContent = String(a));
+      const s = e.querySelector("button[data-action='banish']");
+      s && (s.ariaLabel = `Remove track ${a}`);
+    });
+  },
+  updateAddTrackButton = () => {
+    ((els.addTrack.disabled = state.tracks.length >= 18),
+      (els.addTrack.textContent = "Add track"),
+      (els.addTrack.ariaLabel =
+        state.tracks.length >= 18 ? "Track limit reached" : "Add track"));
+  },
+  renderTracks = () => {
+    (syncParsedTracks(),
+      els.tracks.replaceChildren(...state.tracks.map(renderTrack)),
+      updateAddTrackButton(),
+      (els.tempo.value = String(state.bpm)),
+      (els.tempoReadout.textContent = `${state.bpm} BPM`));
+  },
+  paintActiveSteps = () => {
+    els.tracks.querySelectorAll(".adventurer-card").forEach((e) => {
+      const t = state.tracks.find((t) => t.id === e.dataset.adventurerId);
+      t &&
+        e.querySelectorAll(".rune-stone").forEach((e, a) => {
+          e.classList.toggle("is-glowing", a === t.activeStep);
+        });
+    });
+  },
+  handleTrackInput = (e) => {
+    const t = e.target.closest(".adventurer-card");
+    if (!t) return;
+    const a = state.tracks.find((e) => e.id === t.dataset.adventurerId);
+    if (!a) return;
+    const n = e.target.dataset.action;
+    if ("voice" === n) return ((a.sound = e.target.value), void persist());
+    if ("incantation" === n) {
+      ((a.sequence = e.target.value), (a.activeStep = -1));
+      const n = parseSequence(a.sequence);
+      return (
+        (a.notes = n.notes),
+        (a.error = n.error),
+        updateTrackIndicators(t, a),
+        void persist()
+      );
+    }
+  },
+  handleTrackDraftInput = (e) => {
+    if ("incantation" !== e.target.dataset.action) return;
+    const t = e.target.closest(".adventurer-card");
+    if (!t) return;
+    const a = state.tracks.find((e) => e.id === t.dataset.adventurerId);
+    if (!a) return;
+    ((a.sequence = e.target.value), (a.activeStep = -1));
+    const n = parseSequence(a.sequence);
+    ((a.notes = n.notes),
+      (a.error = n.error),
+      updateTrackIndicators(t, a),
+      persist());
+  },
+  handleTrackClick = (e) => {
+    const t = e.target.closest("button[data-action]");
+    if (!t) return;
+    const a = t.closest(".adventurer-card");
+    if (!a) return;
+    const n = state.tracks.find((e) => e.id === a.dataset.adventurerId);
+    n &&
+      ("silence" === t.dataset.action &&
+        ((n.muted = !n.muted),
+        a.classList.toggle("is-silenced", n.muted),
+        (t.textContent = n.muted ? "Unmute" : "Mute"),
+        persist()),
+      "banish" === t.dataset.action && removeTrack(n.id));
+  },
+  bindEvents = () => {
+    (els.addTrack.addEventListener("click", () => addTrack()),
+      els.playToggle.addEventListener("click", () => {
+        state.playing ? pausePlayback() : startPlayback();
+      }),
+      els.stopButton.addEventListener("click", stopPlayback),
+      els.tempo.addEventListener("input", (e) => {
+        ((state.bpm = Number(e.target.value)),
+          (els.tempoReadout.textContent = `${state.bpm} BPM`),
+          persist());
+      }),
+      els.tracks.addEventListener("change", handleTrackInput),
+      els.tracks.addEventListener("input", handleTrackDraftInput),
+      els.tracks.addEventListener("click", handleTrackClick));
+  },
+  boot = () => {
+    (restore() || (state.tracks = starterTracks.map((e) => makeTrack(e))),
+      (state.bpm = Math.max(48, Math.min(176, state.bpm))),
+      bindEvents(),
+      renderTracks());
+  };
+boot();

@@ -1,0 +1,12 @@
+{
+  "name": "phase-process",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "minify": "terser app.js --compress passes=2 --mangle --output phase.js --comments false",
+    "check:minified": "node --check phase.js"
+  },
+  "devDependencies": {
+    "terser": "^5.44.1"
+  }
+}
