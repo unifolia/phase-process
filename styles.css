@@ -151,7 +151,7 @@ input[type="range"] {
   align-items: center;
   gap: 12px;
   width: fit-content;
-  margin: 22px 0 18px auto;
+  margin: 22px 0 22px auto;
   padding: 10px 12px 10px 10px;
   border: 1px solid rgba(21, 35, 30, 0.24);
   border-radius: 999px;
@@ -431,7 +431,6 @@ textarea {
 
     h1 {
       text-align: center;
-      margin-bottom: 2rem;
     }
   }
 
@@ -440,6 +439,7 @@ textarea {
   }
 
   .haste-control {
+    margin-top: 12px;
     grid-column: 1 / -1;
   }
 
