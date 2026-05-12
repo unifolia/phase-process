@@ -402,6 +402,19 @@ textarea {
   --sigil-aura: #874d42;
 }
 
+footer {
+  padding: 25px 0 50px;
+  a {
+    display: inherit;
+    font-family: "Inter", sans-serif;
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--abyss-ink);
+    text-align: center;
+    text-decoration: none;
+  }
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
