@@ -55,14 +55,15 @@ button:disabled {
 
 .tavern-banner {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(320px, 460px);
-  gap: 22px;
+  grid-template-columns: 1fr;
+  gap: 0;
   align-items: end;
   min-height: 168px;
   animation: rise-in 700ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
 }
 
 h1 {
+  max-width: 50%;
   margin: 0;
   font-size: clamp(4.4rem, 13vw, 10.8rem);
   font-weight: 400;
@@ -71,7 +72,19 @@ h1 {
   text-wrap: balance;
 }
 
+.control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  width: 100vw;
+  margin: 22px calc(50% - 50vw);
+  padding: 0 max(16px, calc((100vw - 1180px) / 2));
+}
+
 .spellbar {
+  width: 100%;
+  max-width: none;
   border: 1px solid rgba(21, 35, 30, 0.26);
   background: linear-gradient(
     135deg,
@@ -84,11 +97,18 @@ h1 {
 
 .spellbar {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   padding: 14px;
   border-radius: var(--rune-radius);
+}
+
+.spellbar .hero-action,
+.haste-control {
+  width: 100%;
+  max-width: 445px;
+  margin: 0 auto;
 }
 
 .hero-action,
@@ -144,17 +164,20 @@ h1 {
 input[type="range"] {
   width: 100%;
   accent-color: var(--blood-sigil);
+  cursor: pointer;
 }
 
 .summoning-circle {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
-  width: fit-content;
-  margin: 22px 0 22px auto;
-  padding: 10px 12px 10px 10px;
+  width: 100%;
+  margin: 0;
+  padding: 14px;
   border: 1px solid rgba(21, 35, 30, 0.24);
-  border-radius: 999px;
+  border-radius: var(--rune-radius);
   background: linear-gradient(
     135deg,
     rgba(247, 242, 227, 0.74),
@@ -164,19 +187,35 @@ input[type="range"] {
   animation: rise-in 700ms 90ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
 }
 
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+#record-session {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .heartbeat-rune {
   width: 13px;
   height: 13px;
   flex: 0 0 auto;
   justify-self: center;
-  margin-left: 2px;
   border: 1px solid rgba(21, 35, 30, 0.32);
   border-radius: 50%;
   background: var(--aged-vellum);
 }
 
 .heartbeat-rune.is-lit {
-  background: var(--druid-moss);
+  background: var(--blood-sigil);
 }
 
 .party-roster {
@@ -187,11 +226,12 @@ input[type="range"] {
 .adventurer-card {
   position: relative;
   display: grid;
-  grid-template-columns: 88px minmax(190px, 260px) minmax(260px, 1fr) auto;
+  grid-template-columns: 138px minmax(190px, 260px) minmax(210px, 1fr) auto;
   gap: 14px;
   align-items: stretch;
   overflow: hidden;
   padding: 14px;
+  perspective: 1200px;
   border: 1px solid rgba(21, 35, 30, 0.24);
   border-radius: var(--rune-radius);
   background:
@@ -217,10 +257,13 @@ input[type="range"] {
 }
 
 .initiative-count {
+  grid-row: 1 / span 2;
   display: grid;
-  align-content: center;
+  grid-template-rows: auto auto 1fr auto;
+  align-content: stretch;
   gap: 3px;
   min-width: 0;
+  min-height: 100%;
   padding-left: 8px;
 }
 
@@ -236,6 +279,90 @@ input[type="range"] {
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.track-settings-button {
+  grid-row: 4;
+  align-self: end;
+  justify-self: start;
+  min-width: 100px;
+  min-height: 45px;
+  border: 1px solid rgba(21, 35, 30, 0.28);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: var(--sage-smoke);
+  background: rgba(247, 242, 227, 0.54);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.track-settings-button:hover {
+  color: var(--abyss-ink);
+  background: var(--aged-vellum);
+}
+
+.track-settings-button[aria-pressed="true"] {
+  color: var(--cantrip-cream);
+  background: var(--sage-smoke);
+}
+
+.track-face {
+  grid-column: 2 / -1;
+  grid-row: 1 / span 2;
+  min-width: 0;
+}
+
+.track-front {
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(210px, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 14px;
+}
+
+.track-back {
+  display: grid;
+  align-items: center;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.adventurer-card.is-flipped .track-front {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.adventurer-card.is-flipped .track-back {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.track-settings-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.track-setting-control {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.track-setting-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--sage-smoke);
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.track-setting-header output {
+  color: var(--abyss-ink);
+  text-transform: none;
 }
 
 .voice-grimoire,
@@ -305,7 +432,7 @@ textarea {
 }
 
 .rune-chain {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
@@ -343,7 +470,7 @@ textarea {
 }
 
 .curse-warning {
-  grid-column: 3 / -1;
+  grid-column: 1 / -1;
   margin: -2px 0 0;
   color: var(--blood-sigil);
   font-family: "Gill Sans", "Trebuchet MS", sans-serif;
@@ -437,36 +564,80 @@ footer {
   }
 }
 
-@media (max-width: 880px) {
+@media (max-width: 990px) {
   .tavern-banner {
     grid-template-columns: 1fr;
     align-items: start;
 
     h1 {
+      max-width: 100%;
+      margin: 0 auto;
       text-align: center;
     }
   }
 
+  .control-row {
+    grid-template-columns: 1fr;
+    align-items: center;
+  }
+
   .spellbar {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100%;
   }
 
   .haste-control {
-    margin-top: 12px;
+    margin: 12px auto 0;
     grid-column: 1 / -1;
   }
 
+  .summoning-circle {
+    width: 100%;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 10px 12px 10px 10px;
+  }
+
   .adventurer-card {
-    grid-template-columns: 72px minmax(0, 1fr) minmax(150px, auto);
+    grid-template-columns: 1fr;
   }
 
   .adventurer-tools {
-    grid-template-columns: minmax(88px, 1fr) 44px;
-    min-width: 150px;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
   }
 
   .adventurer-tools button {
+    width: 100%;
     padding-inline: 12px;
+  }
+
+  .initiative-count {
+    grid-row: auto;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    align-items: end;
+    gap: 3px 8px;
+    padding-left: 8px;
+  }
+
+  .track-settings-button {
+    grid-column: 4;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+  }
+
+  .track-face {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .track-front {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
   }
 
   .incantation-block {
@@ -489,33 +660,21 @@ footer {
     font-size: clamp(3.55rem, 20vw, 5.6rem);
   }
 
-  .summon-button {
-    width: 100%;
-  }
-
   .summoning-circle {
     display: flex;
     width: 100%;
-    justify-content: space-between;
+    justify-content: center;
+  }
+
+  .summon-button {
+    flex: 1 1 calc(50% - 12px);
   }
 
   .adventurer-card {
-    grid-template-columns: 1fr;
     padding: 12px;
   }
 
-  .initiative-count {
-    grid-template-columns: auto 1fr;
-    align-items: end;
-    padding-left: 8px;
-  }
-
-  .adventurer-tools {
-    grid-template-columns: 1fr 1fr;
-    justify-content: stretch;
-  }
-
-  .adventurer-tools button {
-    width: 100%;
+  .track-settings-panel {
+    grid-template-columns: 1fr;
   }
 }
