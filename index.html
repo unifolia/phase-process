@@ -14,38 +14,52 @@
         <div>
           <h1>Phase Process</h1>
         </div>
-        <div class="spellbar" aria-label="Transport controls">
-          <button id="open-portal" class="hero-action" type="button">
-            Play
-          </button>
-          <button id="seal-portal" class="squire-action" type="button">
-            Stop
-          </button>
-          <div class="haste-control">
-            <label for="haste-dial">Tempo</label>
-            <input
-              id="haste-dial"
-              type="range"
-              min="48"
-              max="176"
-              value="86"
-              step="1"
-            />
-            <output id="haste-oracle" for="haste-dial">86 BPM</output>
+        <div class="control-row">
+          <div class="spellbar" aria-label="Transport controls">
+            <button id="open-portal" class="hero-action" type="button">
+              Play
+            </button>
+            <div class="haste-control">
+              <label for="haste-dial">Tempo</label>
+              <input
+                id="haste-dial"
+                type="range"
+                min="48"
+                max="218"
+                value="86"
+                step="1"
+              />
+              <output id="haste-oracle" for="haste-dial">86 BPM</output>
+            </div>
           </div>
+
+          <section class="summoning-circle" aria-label="Track controls">
+            <button id="summon-voice" class="summon-button" type="button">
+              Add track
+            </button>
+            <button id="record-session" class="summon-button" type="button">
+              <span
+                id="heartbeat-rune"
+                class="heartbeat-rune"
+                aria-hidden="true"
+              ></span>
+              <span class="record-label">Record</span>
+            </button>
+            <button id="save-session" class="summon-button" type="button">
+              Save
+            </button>
+            <button id="upload-session" class="summon-button" type="button">
+              Upload
+            </button>
+            <input
+              id="upload-state"
+              class="hidden-file-input"
+              type="file"
+              accept="application/json,.json"
+            />
+          </section>
         </div>
       </header>
-
-      <section class="summoning-circle" aria-label="Track controls">
-        <span
-          id="heartbeat-rune"
-          class="heartbeat-rune"
-          aria-hidden="true"
-        ></span>
-        <button id="summon-voice" class="summon-button" type="button">
-          Add track
-        </button>
-      </section>
 
       <section
         id="party-roster"
