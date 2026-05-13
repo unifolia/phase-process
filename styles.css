@@ -441,8 +441,8 @@ textarea {
 }
 
 .rune-stone {
-  min-width: 43px;
-  height: 31px;
+  min-width: 55px;
+  height: 34px;
   display: inline-grid;
   place-items: center;
   padding: 0 9px;
@@ -677,7 +677,11 @@ footer a {
   }
 
   .adventurer-card {
-    padding: 12px;
+    padding: 12px 12px 12px 19px;
+  }
+
+  .rune-chain {
+    gap: 3px 1.5px;
   }
 
   .track-settings-panel {
