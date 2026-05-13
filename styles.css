@@ -531,15 +531,16 @@ textarea {
 
 footer {
   padding: 25px 0 50px;
-  a {
-    display: inherit;
-    font-family: "Inter", sans-serif;
-    font-size: 1.25rem;
-    font-weight: 300;
-    color: var(--abyss-ink);
-    text-align: center;
-    text-decoration: none;
-  }
+}
+
+footer a {
+  display: inherit;
+  font-family: "Inter", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 300;
+  color: var(--abyss-ink);
+  text-align: center;
+  text-decoration: none;
 }
 
 @keyframes rise-in {
@@ -568,12 +569,12 @@ footer {
   .tavern-banner {
     grid-template-columns: 1fr;
     align-items: start;
+  }
 
-    h1 {
-      max-width: 100%;
-      margin: 0 auto;
-      text-align: center;
-    }
+  .tavern-banner h1 {
+    max-width: 100%;
+    margin: 0 auto;
+    text-align: center;
   }
 
   .control-row {
@@ -598,6 +599,11 @@ footer {
     margin-right: auto;
     margin-left: auto;
     padding: 10px 12px 10px 10px;
+  }
+
+  .spellbar,
+  .summoning-circle {
+    backdrop-filter: none;
   }
 
   .adventurer-card {
