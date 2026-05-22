@@ -9,6 +9,7 @@ const MAX_TRACKS = 18,
   SCHEDULE_START_OFFSET_SECONDS = 0.08,
   LOOKAHEAD_MS = 50,
   IDLE_SUSPEND_MS = 1500,
+  SEQUENCE_BLUR_SUSPEND_MS = 6000,
   PERSIST_DEBOUNCE_MS = 250,
   WAV_RECORDER_WORKLET_URL = "./wav-recorder-worklet.js",
   RECORDING_CHANNELS = 2,
@@ -48,6 +49,7 @@ const MAX_TRACKS = 18,
     nextStepTime: 0,
     tick: 0,
     visualRunId: 0,
+    auditionRunId: 0,
     scheduledVoices: new Set(),
     persistTimer: null,
     trackElements: new Map(),
@@ -174,8 +176,7 @@ const MAX_TRACKS = 18,
     Boolean(e.rest) === Boolean(t.rest),
   noteEditBounds = (e, t) => {
     let a = 0;
-    for (; a < e.length && a < t.length && sameParsedNote(e[a], t[a]); )
-      a += 1;
+    for (; a < e.length && a < t.length && sameParsedNote(e[a], t[a]); ) a += 1;
     let n = e.length,
       r = t.length;
     for (; n > a && r > a && sameParsedNote(e[n - 1], t[r - 1]); )
@@ -197,14 +198,15 @@ const MAX_TRACKS = 18,
   reconcileTrackCursor = (e, t, a) => {
     if (!a.length) return void (e.nextStepIndex = 0);
     if (!t.length)
-      return void (e.nextStepIndex = normalizeCursorBoundary(e.nextStepIndex, a.length));
+      return void (e.nextStepIndex = normalizeCursorBoundary(
+        e.nextStepIndex,
+        a.length,
+      ));
     const n = normalizeCursorBoundary(e.nextStepIndex, t.length);
     const { prefix: r, oldEnd: s, newEnd: o } = noteEditBounds(t, a);
     const c = o - r - (s - r);
     let i = n;
-    (s < n || (s === n && c < 0)
-      ? (i = n + c)
-      : r <= n && n <= s && (i = r),
+    (s < n || (s === n && c < 0) ? (i = n + c) : r <= n && n <= s && (i = r),
       (e.nextStepIndex = normalizeCursorBoundary(i, a.length)));
   },
   advanceCursor = (e, t, a = 1) =>
@@ -225,7 +227,10 @@ const MAX_TRACKS = 18,
   takeNextTrackStep = (e) => {
     if (!e.notes.length) return -1;
     const t = normalizeStepIndex(e.nextStepIndex, e.notes.length);
-    return ((e.nextStepIndex = advanceCursor(e.nextStepIndex, e.notes.length)), t);
+    return (
+      (e.nextStepIndex = advanceCursor(e.nextStepIndex, e.notes.length)),
+      t
+    );
   },
   initAudio = () => {
     if (state.audioContext) return;
@@ -251,6 +256,8 @@ const MAX_TRACKS = 18,
       (window.clearTimeout(state.idleSuspendTimer),
       (state.idleSuspendTimer = null));
   },
+  isSequenceEditor = (e) =>
+    e && e.dataset && "incantation" === e.dataset.action,
   resumeAudioContext = async () => {
     (cancelIdleSuspend(), initAudio());
     const e = state.audioContext;
@@ -287,15 +294,16 @@ const MAX_TRACKS = 18,
       }
     }
   },
-  scheduleIdleSuspend = () => {
+  scheduleIdleSuspend = (e = IDLE_SUSPEND_MS) => {
     (cancelIdleSuspend(),
       !state.audioContext ||
         state.playing ||
         state.recording ||
+        isSequenceEditor(document.activeElement) ||
         (state.idleSuspendTimer = window.setTimeout(() => {
           ((state.idleSuspendTimer = null),
             suspendAudioContext().catch(() => {}));
-        }, 1500)));
+        }, e)));
   },
   shapeGain = (e, t, a) => {
     (e.cancelScheduledValues(t),
@@ -497,6 +505,44 @@ const MAX_TRACKS = 18,
     if (e.muted || t.rest || !players[e.sound]) return;
     const n = ensureTrackChannel(e);
     players[e.sound](t, a, 0.86 * eighthSeconds(), n.input, e.id);
+  },
+  findAuditionNote = (e, t, a = "") => {
+    const { prefix: n, oldEnd: r, newEnd: s } = noteEditBounds(e, t),
+      o = s - n,
+      c = r - n,
+      i =
+        a.startsWith("insert") || a.startsWith("delete") || t.length > e.length;
+    if (!i || o <= 0 || (!a.startsWith("delete") && o < c)) return null;
+    for (let e = s - 1; e >= n; e -= 1) if (!t[e].rest) return t[e];
+    return null;
+  },
+  auditionTrackNote = async (e, t) => {
+    if (
+      !t ||
+      t.rest ||
+      e.muted ||
+      !players[e.sound] ||
+      state.playing ||
+      state.playbackStarting
+    )
+      return;
+    const a = (state.auditionRunId += 1);
+    try {
+      await resumeAudioContext();
+    } catch {
+      return;
+    }
+    if (
+      a !== state.auditionRunId ||
+      state.playing ||
+      state.playbackStarting ||
+      !state.tracks.includes(e) ||
+      !e.notes.includes(t)
+    )
+      return;
+    stopScheduledVoices(e.id);
+    playNote(e, t, state.audioContext.currentTime);
+    scheduleIdleSuspend();
   },
   scheduleStep = (e) => {
     const a = state.visualRunId,
@@ -823,7 +869,7 @@ const MAX_TRACKS = 18,
   applyProjectPayload = (e) => {
     const t = Array.isArray(e) ? e : e && e.tracks;
     if (!Array.isArray(t) || 0 === t.length)
-      throw new Error("Project JSON must include at least one track.");
+      throw new Error("Whatever this is, it ain't right.");
     const a = Array.isArray(e) ? 2 : e.settingsVersion,
       n = t.slice(0, 18).map((e) => normalizeImportedTrack(e, a));
     (pausePlayback(),
@@ -927,6 +973,20 @@ const MAX_TRACKS = 18,
     a && (a.textContent = formatVolume(t.volume));
     const n = e.querySelector("[data-readout='pan']");
     n && (n.textContent = formatPan(t.pan));
+  },
+  warmSequenceEditorAudio = () => {
+    resumeAudioContext().catch(() => {});
+  },
+  handleTrackFocus = (e) => {
+    if (!isSequenceEditor(e.target)) return;
+    (cancelIdleSuspend(), warmSequenceEditorAudio());
+  },
+  handleTrackBlur = (e) => {
+    isSequenceEditor(e.target) &&
+      window.setTimeout(() => {
+        isSequenceEditor(document.activeElement) ||
+          scheduleIdleSuspend(SEQUENCE_BLUR_SUSPEND_MS);
+      }, 0);
   },
   syncCardFlipState = (e, t) => {
     const a = e.querySelector("button[data-action='settings']"),
@@ -1208,7 +1268,8 @@ const MAX_TRACKS = 18,
     if (handleTrackSettingInput(a, n, t, e.target.value)) return;
     n.sequence = e.target.value;
     const r = parseSequence(n.sequence),
-      s = n.notes;
+      s = n.notes,
+      o = findAuditionNote(s, r.notes, e.inputType);
     (reconcileStepIds(s, r.notes),
       reconcileTrackCursor(n, s, r.notes),
       (n.notes = r.notes),
@@ -1216,6 +1277,7 @@ const MAX_TRACKS = 18,
       syncActiveStep(n),
       updateTrackIndicators(a, n),
       persist());
+    auditionTrackNote(n, o);
   },
   handleTrackClick = (e) => {
     const t = e.target.closest("button[data-action]");
@@ -1253,6 +1315,8 @@ const MAX_TRACKS = 18,
           persist());
       }),
       els.tracks.addEventListener("change", handleTrackInput),
+      els.tracks.addEventListener("focusin", handleTrackFocus),
+      els.tracks.addEventListener("focusout", handleTrackBlur),
       els.tracks.addEventListener("input", handleTrackDraftInput),
       els.tracks.addEventListener("click", handleTrackClick),
       window.addEventListener("pagehide", () => {
