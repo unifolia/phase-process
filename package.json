@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "minify": "terser app.js --compress passes=2 --mangle --output phase.js --comments false",
-    "check:minified": "node --check phase.js"
+    "check:minified": "node --check phase.js",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs"
   },
   "devDependencies": {
     "terser": "^5.44.1"

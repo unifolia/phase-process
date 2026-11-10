@@ -1,2 +1,4 @@
 .DS_Store
 presets/
+dist-cloudflare
+.wrangler
