@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "phase-process",
+  "compatibility_date": "2026-11-10",
+  "routes": [
+    { "pattern": "bellcast.engineering/phase-process", "zone_name": "bellcast.engineering" },
+    { "pattern": "bellcast.engineering/phase-process/*", "zone_name": "bellcast.engineering" }
+  ],
+  "build": {
+    "command": "npm run build:cloudflare"
+  },
+  "assets": {
+    "directory": "./dist-cloudflare"
+  },
+  "previews": {},
+  "preview_urls": true
+}
